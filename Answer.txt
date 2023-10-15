@@ -1,0 +1,72 @@
+//prep
+jps
+
+//Q1
+hdfs dfs -ls file:///home/verulam-blue/
+
+//Q2
+hdfs dfs -mv file:///home/verulam-blue/Downloads/data file:///home/verulam-blue/2502010976-RainaImtiyaz/
+hdfs dfs -ls file:///home/verulam-blue/2502010976-RainaImtiyaz/
+
+//Q3
+hdfs dfs -cat file:///home/verulam-blue/2502010976-RainaImtiyaz/data/movies.csv | head -n 10
+
+//Q4
+hdfs dfs -count file:///home/verulam-blue/2502010976-RainaImtiyaz/
+
+//Spark Shell
+spark-shell
+
+//Q5
+val movies = spark.read.option("header", "true").csv("file:///home/verulam-blue/2502010976-RainaImtiyaz/data/movies.csv")
+movies.show(5)
+val tags = spark.read.option("header", "true").csv("file:///home/verulam-blue/2502010976-RainaImtiyaz/data/tags.csv")
+tags.show(5)
+val ratings = spark.read.option("header", "true").csv("file:///home/verulam-blue/2502010976-RainaImtiyaz/data/ratings.csv")
+ratings.show(5)
+
+//Q6
+a)
+val movies2 = movies.withColumnRenamed("movieId", "mId")
+movies2.show(5)
+b)
+val ratings2 = ratings.withColumnRenamed("movieId", "mrId").withColumnRenamed("userId", "ruId").withColumn("rating", ratings("rating").cast("Float"))
+ratings2.show(5)
+c)
+val tags2 = tags.withColumnRenamed("userId", "tuId")
+tags2.show(5)
+
+//Q7
+movies2.createOrReplaceTempView("moviesFinal")
+ratings2.createOrReplaceTempView("ratingsFinal")
+tags2.createOrReplaceTempView("tagsFinal")
+spark.catalog.listTables.show
+
+//Q8
+val df = spark.sql("select * from moviesfinal, ratingsfinal, tagsfinal where moviesfinal.mId == ratingsfinal.mrId and moviesfinal.mId == tagsfinal.movieId and ratingsfinal.ruId == tagsfinal.tuId")
+df.show()
+
+//Q9
+val df1 = df.drop("mrId", "movieId", "timestamp", "tuId")
+df1.show()
+
+//Q10
+df1.createOrReplaceTempView("df1")
+spark.sql("select title, count(*) as count from df1 where rating == 5.0 group by title").orderBy('count.desc).show(10, false)
+
+//Q11
+spark.sql("select ruId, count(*) as count from df1 where rating == 5.0 group by ruId").orderBy('count.desc).show(1)
+
+//Q12
+spark.sql("select ruId, count(*) as count from df1 group by ruId").orderBy('count.desc).show(1)
+spark.sql("select ruId, count(*) as count from df1 group by ruId").orderBy('count.asc).show(1)
+spark.sql("select ruId, count(*) as count from df1 group by ruId").orderBy('count.asc).show()
+
+//Q13
+spark.sql("select title, count(*) as count from df1 where rating == 5.0 and (genres like '%Crime%' or genres like '%Drama%') group by title").orderBy('count.desc).show(false)
+
+//Q14
+spark.sql("select title, rating, count(*) as count from df1 where rating > 2.0 and tag like '%Disney%' and genres like '%Adventure%' group by title, rating").orderBy('rating.desc).show(false)
+
+//Q15
+spark.sql("select ruId, rating, count(*) as count from df1 where rating >= 4.0 and (genres like '%Crime%' or genres like '%Thriller%') group by ruId, rating").orderBy('count.desc).show(false)
